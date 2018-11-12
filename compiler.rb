@@ -93,7 +93,7 @@ class Parser
 
     arg_exprs = parse_arg_exprs
 
-    CallNode.new(name, arg_exprs)
+    CallNode.new(name.value, arg_exprs)
   end
 
   def parse_var_ref
@@ -138,6 +138,31 @@ DefNode = Struct.new(:name, :args, :body)
 IntegerNode = Struct.new(:value)
 CallNode = Struct.new(:name, :arg_exprs)
 VarRefNode = Struct.new(:name)
+
+class Generator
+  def generate(node)
+    case node
+    when DefNode
+      "function %s(%s) { return %s };" % [
+        node.name,
+        node.args.join(", "),
+        generate(node.body)
+      ]
+    when CallNode
+      "%s(%s)" % [
+        node.name,
+        node.arg_exprs.map { |expr| generate(expr) }.join(", ")
+      ]
+    when VarRefNode
+      node.name
+    when IntegerNode
+      node.value
+    else
+      raise RuntimeError.new("Unexpected node type: #{node.class}")
+    end
+  end
+end
 tokens = Tokenizer.new(File.read("test.src")).tokenize
 tree = Parser.new(tokens).parse
-puts tree
+generated = Generator.new.generate(tree)
+puts generated
